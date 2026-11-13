@@ -6,12 +6,11 @@ from datetime import timedelta
 from django.utils.encoding import force_str
 import dj_database_url
 
-# Backward compatibility for older packages
+# Backward compatibility
 django.utils.encoding.force_text = force_str
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # SECURITY SETTINGS
 SECRET_KEY = os.environ.get(
@@ -21,12 +20,15 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "alok-shop-backend.onrender.com"] + [
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "alok-shop-backend.onrender.com",
+] + [
     host.strip()
     for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
     if host.strip()
 ]
-
 
 # APPLICATIONS
 INSTALLED_APPS = [
@@ -41,14 +43,12 @@ INSTALLED_APPS = [
     'rest_framework',
 ]
 
-
 # REST FRAMEWORK
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
-
 
 # MIDDLEWARE
 MIDDLEWARE = [
@@ -63,9 +63,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-
 ROOT_URLCONF = 'project.urls'
-
 
 # TEMPLATES
 TEMPLATES = [
@@ -84,9 +82,7 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = 'project.wsgi.application'
-
 
 # JWT SETTINGS
 SIMPLE_JWT = {
@@ -105,7 +101,6 @@ SIMPLE_JWT = {
     "TOKEN_TYPE_CLAIM": "token_type",
     "JTI_CLAIM": "jti",
 }
-
 
 # DATABASE
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -126,7 +121,6 @@ else:
         }
     }
 
-
 # PASSWORD VALIDATION
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -143,13 +137,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # INTERNATIONALIZATION
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
-
 
 # EMAIL SETTINGS
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
@@ -158,7 +150,6 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
 
 # STATIC AND MEDIA FILES
 STATIC_URL = '/static/'
@@ -173,13 +164,13 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
-MEDIA_URL = '/images/'
+# Serve existing product images through collected static files
+MEDIA_URL = '/static/images/'
 MEDIA_ROOT = BASE_DIR / 'static' / 'images'
-
 
 # CORS SETTINGS
 CORS_ALLOWED_ORIGINS = [
@@ -191,7 +182,6 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-
 # SECURITY FOR RENDER
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -199,7 +189,6 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-
 
 # DEFAULT PRIMARY KEY
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
