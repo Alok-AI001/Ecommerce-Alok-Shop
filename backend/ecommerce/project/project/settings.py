@@ -19,9 +19,9 @@ SECRET_KEY = os.environ.get(
     "django-insecure-local-development-only-change-this"
 )
 
-DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"] + [
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "alok-shop-backend.onrender.com"] + [
     host.strip()
     for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
     if host.strip()
