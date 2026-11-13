@@ -8,88 +8,96 @@ import Loader from "../Loader";
 import Message from "../Message";
 
 function LoginScreen() {
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    const redirect = location.search
-        ? location.search.split("=")[1]
-        : "/";
+  // Get redirect destination from URL
+  const redirect =
+    new URLSearchParams(location.search).get("redirect") || "/";
 
-    const userLogin = useSelector((state) => state.userLogin || {});
-    const { error, loading, userInfo } = userLogin;
+  const userLogin = useSelector((state) => state.userLogin || {});
+  const { error, loading, userInfo } = userLogin;
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-    const submitHandler = (e) => {
-        e.preventDefault();
-        dispatch(login(email, password));
-    };
+  // Login form submission
+  const submitHandler = (e) => {
+    e.preventDefault();
 
-    useEffect(() => {
-        if (userInfo) {
-            navigate(redirect);
-        }
-    }, [userInfo, navigate, redirect]);
+    if (!email.trim() || !password) {
+      return;
+    }
 
-    return (
-        <Container>
-            <Row className="justify-content-center">
-                <Col md={6}>
-                    <h2 className="text-center mt-5">Welcome Back</h2>
+    dispatch(login(email.trim(), password));
+  };
 
-                    <p className="text-center text-muted">
-                        Login to your account
-                    </p>
+  // Redirect after successful login
+  useEffect(() => {
+    if (userInfo) {
+      navigate(redirect, { replace: true });
+    }
+  }, [userInfo, navigate, redirect]);
 
-                    {error && (
-                        <Message variant="danger">{error}</Message>
-                    )}
+  return (
+    <Container>
+      <Row className="justify-content-center">
+        <Col md={6}>
+          <h2 className="text-center mt-5">Welcome Back</h2>
 
-                    {loading ? (
-                        <Loader />
-                    ) : (
-                        <Form onSubmit={submitHandler}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Email Address</Form.Label>
-                                <Form.Control
-                                    required
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                            </Form.Group>
+          <p className="text-center text-muted">
+            Login to your account
+          </p>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Password</Form.Label>
-                                <Form.Control
-                                    required
-                                    type="password"
-                                    placeholder="Enter your password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
-                            </Form.Group>
+          {error && (
+            <Message variant="danger">{error}</Message>
+          )}
 
-                            <Button
-                                type="submit"
-                                variant="success"
-                                className="w-100 mt-2"
-                            >
-                                Login
-                            </Button>
-                        </Form>
-                    )}
+          {loading ? (
+            <Loader />
+          ) : (
+            <Form onSubmit={submitHandler}>
+              <Form.Group className="mb-3">
+                <Form.Label>Email Address</Form.Label>
+                <Form.Control
+                  required
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </Form.Group>
 
-                    <div className="text-center mt-3 mb-4">
-                        New user? <Link to="/signup">Create Account</Link>
-                    </div>
-                </Col>
-            </Row>
-        </Container>
-    );
+              <Form.Group className="mb-3">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  required
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </Form.Group>
+
+              <Button
+                type="submit"
+                variant="success"
+                className="w-100 mt-2"
+                disabled={loading}
+              >
+                Login
+              </Button>
+            </Form>
+          )}
+
+          <div className="text-center mt-3 mb-4">
+            New user? <Link to="/signup">Create Account</Link>
+          </div>
+        </Col>
+      </Row>
+    </Container>
+  );
 }
 
 export default LoginScreen;
