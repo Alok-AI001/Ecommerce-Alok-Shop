@@ -1,24 +1,28 @@
 
 from django.shortcuts import render
-from .models import Product, Order, OrderItem, ShippingAddress
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
+from django.views.generic import View
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_text
 
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework import status
 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from .models import Product, Order, OrderItem, ShippingAddress
 from .serializer import (
     ProductSerializer,
     UserSerializerWithToken,
     OrderSerializer,
     UserSerializer
 )
-
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
-
-from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password
+from .utils import generate_token
 
 
 # =========================
@@ -27,15 +31,14 @@ from django.contrib.auth.hashers import make_password
 
 @api_view(['GET'])
 def getRoutes(request):
-    myapis = [
+    return Response([
         {
-            "products": "http://127.0.0.1:8000/api/products",
-            "product": "http://127.0.0.1:8000/api/product/1",
-            "login": "http://127.0.0.1:8000/api/users/login",
-            "signup": "http://127.0.0.1:8000/api/users/register",
+            "products": request.build_absolute_uri("/api/products/"),
+            "product": request.build_absolute_uri("/api/product/1/"),
+            "login": request.build_absolute_uri("/api/users/login/"),
+            "signup": request.build_absolute_uri("/api/users/register/"),
         }
-    ]
-    return Response(myapis)
+    ])
 
 
 # =========================
@@ -51,9 +54,15 @@ def getProducts(request):
 
 @api_view(['GET'])
 def getProduct(request, pk):
-    product = Product.objects.get(_id=pk)
-    serializer = ProductSerializer(product, many=False)
-    return Response(serializer.data)
+    try:
+        product = Product.objects.get(_id=pk)
+        serializer = ProductSerializer(product, many=False)
+        return Response(serializer.data)
+    except Product.DoesNotExist:
+        return Response(
+            {"details": "Product not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 # =========================
@@ -64,12 +73,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
-
         serializer = UserSerializerWithToken(self.user).data
-
-        for key, value in serializer.items():
-            data[key] = value
-
+        data.update(serializer)
         return data
 
 
@@ -78,12 +83,11 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
 
 # =========================
-# SIGNUP - NO EMAIL ACTIVATION
+# SIGNUP
 # =========================
 
 @api_view(['POST'])
 def registerUser(request):
-
     data = request.data
 
     fname = data.get('fname', '').strip()
@@ -109,19 +113,13 @@ def registerUser(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if User.objects.filter(username=email).exists():
+    if User.objects.filter(username=email).exists() or User.objects.filter(email=email).exists():
         return Response(
             {'details': 'Email already registered. Please login.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if User.objects.filter(email=email).exists():
-        return Response(
-            {'details': 'Email already registered. Please login.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    user = User.objects.create_user(
+    User.objects.create_user(
         username=email,
         email=email,
         first_name=fname,
@@ -137,25 +135,15 @@ def registerUser(request):
 
 
 # =========================
-# OLD ACTIVATION VIEW
-# Kept for existing activation URLs
+# ACCOUNT ACTIVATION
 # =========================
-
-from django.views.generic import View
-from django.template.loader import render_to_string
-from django.utils.http import urlsafe_base64_decode
-from django.utils.encoding import force_text
-from .utils import generate_token
-
 
 class ActivateAccountView(View):
 
     def get(self, request, uidb64, token):
-
         try:
             uid = force_text(urlsafe_base64_decode(uidb64))
             user = User.objects.get(pk=uid)
-
         except Exception:
             user = None
 
@@ -174,98 +162,93 @@ class ActivateAccountView(View):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def addOrderItems(request):
-
     user = request.user
     data = request.data
-    orderItems = data['orderItems']
+    order_items = data.get('orderItems', [])
 
-    if not orderItems:
+    if not order_items:
         return Response(
-            {'details': "No Order Items"},
+            {'details': 'No Order Items'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    order = Order.objects.create(
-        user=user,
-        paymentMethod='Cash on Delivery',
-        taxPrice=data['taxPrice'],
-        shippingPrice=data['shippingPrice'],
-        totalPrice=data['totalPrice']
-    )
-
-    ShippingAddress.objects.create(
-        order=order,
-        address=data['shippingAddress']['address'],
-        city=data['shippingAddress']['city'],
-        postalCode=data['shippingAddress']['postalCode'],
-        country=data['shippingAddress']['country']
-    )
-
-    for item_data in orderItems:
-
-        product = Product.objects.get(_id=item_data['product'])
-
-        item = OrderItem.objects.create(
-            product=product,
-            order=order,
-            name=product.name,
-            qty=item_data['qty'],
-            price=item_data['price'],
-            image=product.image.url
+    try:
+        order = Order.objects.create(
+            user=user,
+            paymentMethod='Cash on Delivery',
+            taxPrice=data['taxPrice'],
+            shippingPrice=data['shippingPrice'],
+            totalPrice=data['totalPrice']
         )
 
-        product.countInStock -= item.qty
-        product.save()
+        ShippingAddress.objects.create(
+            order=order,
+            address=data['shippingAddress']['address'],
+            city=data['shippingAddress']['city'],
+            postalCode=data['shippingAddress']['postalCode'],
+            country=data['shippingAddress']['country']
+        )
 
-    serializer = OrderSerializer(order, many=False)
+        for item_data in order_items:
+            product = Product.objects.get(_id=item_data['product'])
 
-    return Response(serializer.data)
+            item = OrderItem.objects.create(
+                product=product,
+                order=order,
+                name=product.name,
+                qty=item_data['qty'],
+                price=item_data['price'],
+                image=product.image.url if product.image else ''
+            )
+
+            product.countInStock -= item.qty
+            product.save()
+
+        serializer = OrderSerializer(order, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    except (Product.DoesNotExist, KeyError, TypeError, ValueError) as error:
+        return Response(
+            {'details': str(error)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getMyOrders(request):
-
-    user = request.user
-    orders = user.order_set.all()
-
+    orders = request.user.order_set.all()
     serializer = OrderSerializer(orders, many=True)
-
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def getOrders(request):
-
     orders = Order.objects.all()
     serializer = OrderSerializer(orders, many=True)
-
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getOrderById(request, pk):
-
-    user = request.user
-
     try:
         order = Order.objects.get(_id=pk)
 
-        if user.is_staff or order.user == user:
+        if request.user.is_staff or order.user == request.user:
             serializer = OrderSerializer(order, many=False)
             return Response(serializer.data)
 
         return Response(
-            {'details': "Not authorized to view this order"},
-            status=status.HTTP_400_BAD_REQUEST
+            {'details': 'Not authorized to view this order'},
+            status=status.HTTP_403_FORBIDDEN
         )
 
     except Order.DoesNotExist:
         return Response(
             {'details': 'Order does not exist'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=status.HTTP_404_NOT_FOUND
         )
 
 
@@ -276,11 +259,8 @@ def getOrderById(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def createProduct(request):
-
-    user = request.user
-
     product = Product.objects.create(
-        user=user,
+        user=request.user,
         name='Sample Name',
         price=0,
         brand='Sample Brand',
@@ -290,52 +270,72 @@ def createProduct(request):
     )
 
     serializer = ProductSerializer(product, many=False)
-
-    return Response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['PUT'])
 @permission_classes([IsAdminUser])
 def updateProduct(request, pk):
+    try:
+        product = Product.objects.get(_id=pk)
+        data = request.data
 
-    data = request.data
-    product = Product.objects.get(_id=pk)
+        product.name = data['name']
+        product.price = data['price']
+        product.brand = data['brand']
+        product.countInStock = data['countInStock']
+        product.category = data['category']
+        product.description = data['description']
 
-    product.name = data['name']
-    product.price = data['price']
-    product.brand = data['brand']
-    product.countInStock = data['countInStock']
-    product.category = data['category']
-    product.description = data['description']
+        product.save()
 
-    product.save()
+        serializer = ProductSerializer(product, many=False)
+        return Response(serializer.data)
 
-    serializer = ProductSerializer(product, many=False)
-
-    return Response(serializer.data)
+    except Product.DoesNotExist:
+        return Response(
+            {'details': 'Product not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 @api_view(['POST'])
 def uploadImage(request):
+    try:
+        product_id = request.data['product_id']
+        product = Product.objects.get(_id=product_id)
+        image = request.FILES.get('image')
 
-    data = request.data
-    product_id = data['product_id']
+        if not image:
+            return Response(
+                {'details': 'No image uploaded'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    product = Product.objects.get(_id=product_id)
-    product.image = request.FILES.get('image')
-    product.save()
+        product.image = image
+        product.save()
 
-    return Response('Image was Uploaded')
+        return Response({'details': 'Image was uploaded'})
+
+    except Product.DoesNotExist:
+        return Response(
+            {'details': 'Product not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def deleteProduct(request, pk):
-
-    product = Product.objects.get(_id=pk)
-    product.delete()
-
-    return Response('Product Deleted....')
+    try:
+        product = Product.objects.get(_id=pk)
+        product.delete()
+        return Response({'details': 'Product deleted'})
+    except Product.DoesNotExist:
+        return Response(
+            {'details': 'Product not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 # =========================
@@ -345,42 +345,40 @@ def deleteProduct(request, pk):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def getUsers(request):
-
     users = User.objects.all()
     serializer = UserSerializer(users, many=True)
-
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getUserById(request, pk):
-
-    user = User.objects.get(id=pk)
-    serializer = UserSerializer(user, many=False)
-
-    return Response(serializer.data)
+    try:
+        user = User.objects.get(id=pk)
+        serializer = UserSerializer(user, many=False)
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response(
+            {'details': 'User not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getUserProfile(request):
-
-    user = request.user
-    serializer = UserSerializer(user, many=False)
-
+    serializer = UserSerializer(request.user, many=False)
     return Response(serializer.data)
 
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def updateUserProfile(request):
-
     user = request.user
     data = request.data
 
-    user.first_name = data['fname']
-    user.last_name = data['lname']
+    user.first_name = data.get('fname', user.first_name)
+    user.last_name = data.get('lname', user.last_name)
 
     if data.get('password'):
         user.password = make_password(data['password'])
@@ -388,33 +386,41 @@ def updateUserProfile(request):
     user.save()
 
     serializer = UserSerializerWithToken(user, many=False)
-
     return Response(serializer.data)
 
 
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def deleteUser(request, pk):
-
-    user = User.objects.get(id=pk)
-    user.delete()
-
-    return Response("User is Deleted...")
+    try:
+        user = User.objects.get(id=pk)
+        user.delete()
+        return Response({'details': 'User deleted'})
+    except User.DoesNotExist:
+        return Response(
+            {'details': 'User not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 @api_view(['PUT'])
 @permission_classes([IsAdminUser])
 def updateUser(request, pk):
+    try:
+        user = User.objects.get(id=pk)
+        data = request.data
 
-    user = User.objects.get(id=pk)
-    data = request.data
+        user.first_name = data.get('name', user.first_name)
+        user.email = data.get('email', user.email)
+        user.is_staff = data.get('isAdmin', user.is_staff)
 
-    user.first_name = data['name']
-    user.email = data['email']
-    user.is_staff = data['isAdmin']
+        user.save()
 
-    user.save()
+        serializer = UserSerializer(user, many=False)
+        return Response(serializer.data)
 
-    serializer = UserSerializer(user, many=False)
-
-    return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response(
+            {'details': 'User not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
