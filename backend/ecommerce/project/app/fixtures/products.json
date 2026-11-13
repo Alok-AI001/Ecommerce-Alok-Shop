@@ -1,0 +1,104 @@
+[
+  {
+    "model": "app.product",
+    "pk": 1,
+    "fields": {
+      "name": "Airpods Wireless Bluetooth Headphones",
+      "image": "e2.jpg",
+      "brand": "Apple",
+      "category": "Electronics",
+      "description": "Bluetooth technology lets you connect it with compatible devices wirelessly High-quality AAC audio offers immersive listening experience Built-in microphone allows you to take calls while working",
+      "rating": "4.50",
+      "numReviews": 125,
+      "price": "25000.00",
+      "countInStock": 7,
+      "createdAt": "2024-07-09T02:19:40.784Z",
+      "user": null
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 2,
+    "fields": {
+      "name": "iPhone15 Pro Max 256GB",
+      "image": "promax.jpg",
+      "brand": "Apple",
+      "category": "Electronics",
+      "description": "Introducing the iPhone 11 Pro. A transformative triple-camera system that adds tons of capability without complexity. An unprecedented leap in battery life",
+      "rating": "4.50",
+      "numReviews": 100000000,
+      "price": "99999.00",
+      "countInStock": 63,
+      "createdAt": "2024-07-09T02:23:42.400Z",
+      "user": null
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 3,
+    "fields": {
+      "name": "Cannon EOS 80D DSLR Camera",
+      "image": "camera.jpg",
+      "brand": "Cannon",
+      "category": "Electronics",
+      "description": "Characterized by versatile imaging specs, the Canon EOS 80D further clarifies itself using a pair of robust focusing systems and an intuitive design",
+      "rating": "3.50",
+      "numReviews": 10,
+      "price": "12500.00",
+      "countInStock": 0,
+      "createdAt": "2024-07-09T02:24:37.915Z",
+      "user": null
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 4,
+    "fields": {
+      "name": "Amazon Echo Dot 3rd Generation Earbuds",
+      "image": "e4.jpg",
+      "brand": "Amazon",
+      "category": "Amazon",
+      "description": "Meet Echo Dot - Our most popular smart speaker with a fabric design. It is our most compact smart speaker that fits perfectly into small space",
+      "rating": "4.00",
+      "numReviews": 5,
+      "price": "5000.00",
+      "countInStock": 4,
+      "createdAt": "2024-07-15T01:22:41.688Z",
+      "user": null
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 7,
+    "fields": {
+      "name": "Earbuds bolt India",
+      "image": "e2_5btKa5V.jpg",
+      "brand": "Earbuds",
+      "category": "boult",
+      "description": "Best earbuds in market",
+      "rating": null,
+      "numReviews": 0,
+      "price": "5000.00",
+      "countInStock": 13,
+      "createdAt": "2024-07-20T02:02:46.877Z",
+      "user": null
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 9,
+    "fields": {
+      "name": "Shoes",
+      "image": "shoe.jpg",
+      "brand": "paragon",
+      "category": "shoes",
+      "description": "Best shoes in market",
+      "rating": null,
+      "numReviews": 0,
+      "price": "500.00",
+      "countInStock": 12,
+      "createdAt": "2024-08-11T14:14:42.624Z",
+      "user": null
+    }
+  }
+]
